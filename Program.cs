@@ -1,44 +1,46 @@
+using API.Hangfire;
+using Hangfire;
+using Hangfire.Storage.SQLite;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+GlobalJobFilters.Filters.Add(new AutomaticRetryAttribute { Attempts = 3, DelaysInSeconds = [300] });
+
+builder.Services
+.AddEndpointsApiExplorer()
+.AddSwaggerGen()
+.AddHangfire(config => config
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSQLiteStorage())
+.AddHangfireServer();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app
+.UseSwagger()
+.UseSwaggerUI()
+.UseHttpsRedirection()
+.UseHangfireDashboard();
 
-app.UseHttpsRedirection();
+HangfireConfig.ConfigureRecurringJob();
 
-var summaries = new[]
+app.MapGet("/job", () =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    BackgroundJob.Enqueue(() => HangfireConfig.JobExecutado());
+    return Results.Ok("Job disparado");
+});
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/job/com-erro", () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+    BackgroundJob.Enqueue(() => HangfireConfig.JobComErro());
+    return Results.Ok("Job disparado");
+});
+
+app.MapGet("/job/com-parametro", (string parametro) =>
+{
+    BackgroundJob.Enqueue(() => HangfireConfig.JobComParametro(parametro));
+    return Results.Ok($"Job disparado -> {parametro}");
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
