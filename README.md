@@ -12,8 +12,8 @@ Este é um projeto de API utilizando o Hangfire com armazenamento SQLite. O Hang
 1. Clone o repositório:
 
     ```sh
-    git clone https://github.com/seu-usuario/seu-repositorio.git
-    cd seu-repositorio
+    git clone https://github.com/thaliysdare/API.Hangfire.git
+    cd API.Hangfire
     ```
 
 2. Restaure as dependências do projeto:
